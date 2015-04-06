@@ -1,0 +1,113 @@
+// The hash is generated from the manifest contents,
+// so changes to the manifest will be picked up here
+// and create their own cache.
+var cachePrefix = {{json cachePrefix}};
+var staticCacheName = {{json staticCacheName}};
+var explicitCache = {{json explicitCache}};
+{{#if networkOnly.length}}
+var networkOnly = {{json networkOnly}};
+{{/if}}
+{{#if fallbacks.length}}
+var fallbacks = {{json fallbacks}}.filter(function(fallbackEntry) {
+  var prefixURL   = new URL(fallbackEntry[0], location);
+  var fallbackURL = new URL(fallbackEntry[1], location);
+  fallbackEntry[0] = prefixURL.href;
+  fallbackEntry[1] = fallbackURL.href;
+  // Cross-origin fallbacks are possible with ServiceWorker,
+  // but AppCache doesn't allow them, so we're going to drop them
+  // here too.
+  return prefixURL === location.origin && fallbackURL === location.origin;
+})
+{{/if}}
+
+self.addEventListener('install', function(event) {
+  // TODO: skipwaiting
+
+  var requests = explicitCache{{#if fallbacks.length}}.concat(
+    fallbacks.map(function(fallbackEntry){ return fallbackEntry[1]; })
+  ){{/if}}.map(function(url) {
+    // Appcache makes no-cors requests by default, you may not want this
+    return new Request(url, {mode: 'no-cors'});
+  });
+
+  event.waitUntil(
+    Promise.all(requests.map(function(request) {
+      // Fetch the stuff we want to cache
+      return fetch(request).then(function(response) {
+        // If the response looks like an error, it's considered a failure.
+        // Note: we can only detect this on same-origin requests.
+        var responseOk = response.type == 'opaque' || (response.status >= 200 && response.status < 300);
+        // Appcache considers redirects a failure.
+        var redirected = response.url != request.url;
+        // Appcache refuses to cache 'no-store' responses.
+        // Note: we can only detect this on same-origin requests.
+        var noStore = response.type != 'opaque' && (response.headers.get('cache-control') || '').toLowerCase().indexOf('no-store') != -1;
+        
+        if (responseOk && !redirected && !noStore) {
+          return response;
+        }
+        throw Error("Invalid response from " + request.url);
+      });
+    })).then(function(responses) {
+      // Cache them
+      return caches.open(staticCacheName).then(function(cache) {
+        return Promise.all(responses.map(function(response, i) {
+          return cache.put(requests[i], response);
+        }));
+      });
+    })
+  );
+});
+
+self.addEventListener('activate', function(event) {
+  // Delete caches from previous versions
+  event.waitUntil(
+    caches.keys().then(function(cacheNames) {
+      return Promise.all(cacheNames.map(function(name) {
+        if (name.indexOf(cachePrefix + '-') === 0 && name !== staticCacheName) {
+          return caches.delete(cacheName);
+        }
+      }));
+    })
+  );
+});
+
+self.addEventListener('fetch', function(event) {
+  // Appcache only handles GET requests
+  if (event.request.method != 'GET') return;
+  {{#if networkOnly.length}}
+  // Entries in NETWORK (except '*') cause an early-exit
+  if (networkOnly.indexOf(event.request.url) != -1) return;
+  {{/if}}
+
+  event.respondWith(
+    caches.open(staticCacheName).then(function(cache) {
+      return cache.match(event.request){{#if fallbacks.length}}.then(function(response) {
+        // Handling FALLBACK:
+        // If we already have a response, use it.
+        if (response) return response;
+        // FALLBACK doesn't apply to other-origin URLs.
+        if (new URL(event.request.url).origin != location.origin) return;
+
+        for (var fallbackEntry of fallbacks) {
+          // Look for a prefix match
+          if (event.request.url.indexOf(fallbackEntry[0]) === 0) {
+            return fetch(event.request).then(function(response) {
+              // Successful but error-like responses are treated as failures.
+              var responseOk = response.status >= 200 && response.status < 300;
+              // Redirects to other origins are counted as failures.
+              var responseSameOrigin = new URL(response.url).origin == location.origin;
+              if (!responseOk || !responseSameOrigin) throw Error("Fallback request failure");
+            }).catch(function() {
+              // Use the fallback
+              return cache.match(fallbackEntry[1]);
+            });
+          }
+        }
+      }){{/if}};
+    }){{#if allowNetworkFallback}}.then(function(response) {
+      // You had "*" in your network section, lucky you!
+      return response || fetch(event.request);
+    }){{/if}}
+  );
+});
