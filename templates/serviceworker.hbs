@@ -90,8 +90,10 @@ self.addEventListener('fetch', function(event) {
   // Appcache only handles GET & same-scheme requests
   if (event.request.method != 'GET' || requestURL.scheme != location.scheme) return;
   {{#if networkOnly.length}}
-  // Entries in NETWORK (except '*') cause an early-exit
-  if (networkOnly.indexOf(event.request.url) != -1) return;
+  // Prefix matches in NETWORK (except '*') cause an early-exit
+  for (var networkEntry of networkOnly) {
+    if (requestURL.href.indexOf(networkEntry) === 0) return;
+  }
   {{/if}}
 
   event.respondWith(
