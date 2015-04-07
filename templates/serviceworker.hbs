@@ -103,11 +103,11 @@ self.addEventListener('fetch', function(event) {
         // If we already have a response, use it.
         if (response) return response;
         // FALLBACK doesn't apply to other-origin URLs.
-        if (new URL(event.request.url).origin != location.origin) return;
+        if (requestURL.origin != location.origin) return;
 
         for (var fallbackEntry of fallbacks) {
           // Look for a prefix match
-          if (event.request.url.indexOf(fallbackEntry[0]) === 0) {
+          if (requestURL.href.indexOf(fallbackEntry[0]) === 0) {
             return fetch(event.request).then(function(response) {
               // Successful but error-like responses are treated as failures.
               var responseOk = response.status >= 200 && response.status < 300;
