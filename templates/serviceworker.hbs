@@ -3,9 +3,18 @@
 // and create their own cache.
 var cachePrefix = {{json cachePrefix}};
 var staticCacheName = {{json staticCacheName}};
-var explicitCache = {{json explicitCache}};
+var explicitCache = {{json explicitCache}}.filter(function(url) {
+  // Appcache silently ignores urls with a different protocol,
+  // even HTTPS when the host is HTTP, so I guess we'll do
+  // the same.
+  return new URL(url).protocol === localtion.protocol;
+});
 {{#if networkOnly.length}}
-var networkOnly = {{json networkOnly}};
+var networkOnly = {{json networkOnly}}.filter(function(url) {
+  // Again, Appcache silently ignores URLs of a
+  // different scheme.
+  return new URL(url).protocol === localtion.protocol;
+});;
 {{/if}}
 {{#if fallbacks.length}}
 var fallbacks = {{json fallbacks}}.filter(function(fallbackEntry) {
