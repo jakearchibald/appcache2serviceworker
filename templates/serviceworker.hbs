@@ -17,16 +17,20 @@ var networkOnly = {{json networkOnly}}.filter(function(url) {
 });;
 {{/if}}
 {{#if fallbacks.length}}
-var fallbacks = {{json fallbacks}}.filter(function(fallbackEntry) {
+var fallbacks = {{json fallbacks}}.reduce(function(entries, fallbackEntry) {
   var prefixURL   = new URL(fallbackEntry[0], location);
   var fallbackURL = new URL(fallbackEntry[1], location);
-  fallbackEntry[0] = prefixURL.href;
-  fallbackEntry[1] = fallbackURL.href;
+
   // Cross-origin fallbacks are possible with ServiceWorker,
   // but AppCache doesn't allow them, so we're going to drop them
-  // here too.
-  return prefixURL === location.origin && fallbackURL === location.origin;
-})
+  // here too. Duplicates are also ignored.
+  if (prefixURL === location.origin
+    && fallbackURL === location.origin
+    && entries.indexOf(prefixURL.href) == -1) {
+    entries.push([prefixURL.href, fallbackURL.href]);
+  }
+  return entries;
+}, []);
 {{/if}}
 
 self.addEventListener('install', function(event) {
