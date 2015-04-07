@@ -86,8 +86,9 @@ self.addEventListener('activate', function(event) {
 });
 
 self.addEventListener('fetch', function(event) {
-  // Appcache only handles GET requests
-  if (event.request.method != 'GET') return;
+  var requestURL = new URL(event.request.url);
+  // Appcache only handles GET & same-scheme requests
+  if (event.request.method != 'GET' || requestURL.scheme != location.scheme) return;
   {{#if networkOnly.length}}
   // Entries in NETWORK (except '*') cause an early-exit
   if (networkOnly.indexOf(event.request.url) != -1) return;
