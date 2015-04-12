@@ -1,14 +1,16 @@
+var cachePrefix = {{json cachePrefix}};
 // The hash is generated from the manifest contents,
 // so changes to the manifest will be picked up here
 // and create their own cache.
-var cachePrefix = {{json cachePrefix}};
 var staticCacheName = {{json staticCacheName}};
-var explicitCache = {{json explicitCache}}.filter(function(url) {
+{{#if hasCachedItems}}
+var explicitCache = {{json explicitCache}}{{#if explicitCache.length}}.filter(function(url) {
   // Appcache silently ignores urls with a different protocol,
   // even HTTPS when the host is HTTP, so I guess we'll do
   // the same.
   return new URL(url).protocol === localtion.protocol;
-});
+}){{/if}};
+{{/if}}
 {{#if networkOnly.length}}
 var networkOnly = {{json networkOnly}}.filter(function(url) {
   // Again, Appcache silently ignores URLs of a
@@ -35,6 +37,7 @@ var fallbacks = {{json fallbacks}}.reduce(function(entries, fallbackEntry) {
 
 self.addEventListener('install', function(event) {
   // TODO: skipwaiting
+  {{#if hasCachedItems}}
 
   var requests = explicitCache{{#if fallbacks.length}}.concat(
     fallbacks.map(function(fallbackEntry){ return fallbackEntry[1]; })
@@ -70,6 +73,7 @@ self.addEventListener('install', function(event) {
       });
     })
   );
+  {{/if}}
 });
 
 self.addEventListener('activate', function(event) {

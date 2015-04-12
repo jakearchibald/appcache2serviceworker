@@ -1,19 +1,14 @@
 'use strict';
 
 var parseManifest = require('parse-appcache-manifest');
-var crypto = require('crypto');
 var swTemplate = require('./serviceworker');
 var Handlebars = require('handlebars/runtime');
+// Avoiding the full crypto lib, as that's huge
+var sha1 = require('sha1');
 
 Handlebars.registerHelper('json', function (val) {
   return new Handlebars.SafeString(JSON.stringify(val, undefined, '  '));
 });
-
-function createSHA1(input) {
-  var shasum = crypto.createHash('sha1');
-  shasum.update(input, 'utf8');
-  return shasum.digest('hex');
-}
 
 function appcache2ServiceWorker(input) {
   var _ref = arguments[1] === undefined ? {} : arguments[1];
@@ -21,7 +16,7 @@ function appcache2ServiceWorker(input) {
   var _ref$cachePrefix = _ref.cachePrefix;
   var cachePrefix = _ref$cachePrefix === undefined ? 'siteName' : _ref$cachePrefix;
 
-  var version = createSHA1(input).slice(0, 7);
+  var version = sha1(input).slice(0, 7);
   var staticCacheName = cachePrefix + '-static-' + version;
   var manifest = parseManifest(input);
   var fallbacks = Object.keys(manifest.fallback).map(function (key, i) {
@@ -38,7 +33,8 @@ function appcache2ServiceWorker(input) {
     fallbacks: fallbacks,
     explicitCache: manifest.cache,
     networkOnly: networkOnly,
-    allowNetworkFallback: allowNetworkFallback
+    allowNetworkFallback: allowNetworkFallback,
+    hasCachedItems: manifest.cache.length || fallbacks.length
   });
 
   return js;

@@ -1,0 +1,56 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Appcache 2 ServiceWorker</title>
+    <meta name="theme-color" content="#F57C00">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style></style>
+    <script>
+      if ((!location.port || location.port == "80") && location.protocol != 'https:') {
+        location.protocol = 'https:';
+      }
+
+      /*window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+      ga('create', 'UA-58850134-1', 'auto');
+      ga('send', 'pageview');*/
+    </script>
+    <!--<link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon-precomposed" href="imgs/icon.png">
+    <link rel="icon" href="imgs/icon.png">-->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="Appcache 2 ServiceWorker">
+  </head>
+  <body>
+    <div class="app-output">
+      <div class="toolbar">
+        Appcache 2 ServiceWorker
+      </div>
+      <div class="main">
+        <textarea class="input">CACHE MANIFEST</textarea>
+        <pre class="output"></pre>
+      </div>
+      <script>
+        requestAnimationFrame(function() {
+          [
+            "css/all.css",
+            "https://fonts.googleapis.com/css?family=Roboto:400,700|Inconsolata"
+          ].forEach(function(url) {
+            var link = document.createElement('link');
+            link.rel = "stylesheet";
+            link.href = url;
+            document.head.appendChild(link);
+          });
+
+          [
+            'js/page.js',
+            '//www.google-analytics.com/analytics.js'
+          ].forEach(function(url) {
+            var script = document.createElement('script');
+            script.src = url;
+            document.head.appendChild(script);
+          })
+        });
+      </script>
+    </div>
+  </body>
+</html>
